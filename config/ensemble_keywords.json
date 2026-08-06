@@ -1,0 +1,11 @@
+{
+  "ALL": ["all choirs", "all ensembles", "all-choral", "all choral"],
+  "Aviator Chorale": ["aviator chorale", "ac"],
+  "Copilots": ["Copilots", "cp"],
+  "Octaviation": ["octaviation", "octa"],
+  "Select": ["select"],
+  "Belle Voci": ["belle voci", "bv "],
+  "SSC": ["ssc"],
+  "GR Machine": ["gr machine"],
+  "Boosters": ["booster"]
+}

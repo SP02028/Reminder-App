@@ -1,4 +1,10 @@
 {
-  "Aves": { "group_id": "group_aves", "enabled": true },
-  "Octaviation": { "group_id": "group_octaviation", "enabled": true }
+  "Octaviation White": { "bot_env_var": "GROUPME_BOT_ID_OCTAVIATION_WHITE", "enabled": true },
+  "Octaviation Green": { "bot_env_var": "GROUPME_BOT_ID_OCTAVIATION_GREEN", "enabled": true },
+  "Octaviation Gold": { "bot_env_var": "GROUPME_BOT_ID_OCTAVIATION_GOLD", "enabled": true },
+  "Select": { "bot_env_var": "GROUPME_BOT_ID_SELECT", "enabled": true },
+  "Belle Voci": { "bot_env_var": "GROUPME_BOT_ID_BELLE_VOCI", "enabled": true },
+  "Aviator Chorale": { "bot_env_var": "GROUPME_BOT_ID_AVIATOR_CHORALE", "enabled": true },
+  "Copilots": { "bot_env_var": "GROUPME_BOT_ID_COPILOTS", "enabled": true },
+  "Boosters": { "bot_env_var": "GROUPME_BOT_ID_BOOSTERS", "enabled": true }
 }

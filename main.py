@@ -1,11 +1,16 @@
-from datetime import datetime, timedelta
 import json
+import os
+import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
 from config.settings import SETTINGS
-from calendar.sheets import read_sheet_csv
-from calendar.parser import parse_rows
-from messaging.groupme import send_message
+from sheet_calendar.sheets import read_calendar_grid
+from sheet_calendar.parser import parse_calendar_grid
+from messaging.groupme import send_message, load_sent_keys
 
 
 def load_json(path):
@@ -17,40 +22,62 @@ def load_json(path):
 
 def format_reminder(event, days_before):
     date_str = event.date.strftime('%A, %B %d')
-    lines = ["🎶 **Choir Reminder**", "", f"**{event.title}**", "", f"📅 {date_str}", "", f"📍 {event.location}", "", "Please bring your folder and water."]
+    lines = ["🎶 **Choir Reminder**", "", f"**{event.title}**", "", f"📅 {date_str}"]
+    if event.start_time:
+        lines += ["", f"🕒 {event.start_time}"]
+    if event.location:
+        lines += ["", f"📍 {event.location}"]
+    when = "today!" if days_before == 0 else f"{days_before} day{'s' if days_before != 1 else ''} away"
+    lines += ["", f"({when})"]
     return "\n\n".join(lines)
+
+
+def reminder_key(event, ensemble, days_before):
+    return f"{event.date.isoformat()}|{ensemble}|{days_before}|{event.title}"
 
 
 def main():
     settings = SETTINGS
-    rows = read_sheet_csv(settings['sheet_csv'])
-    events = parse_rows(rows)
+    rows = read_calendar_grid(settings['sheet_csv'])
+    keyword_map = load_json(settings['ensemble_keywords_file']) or {}
+    events = parse_calendar_grid(rows, settings['calendar_start_year'], keyword_map)
+
     ensembles_cfg = load_json(settings['ensembles_file']) or {}
-    reminders_schedule = load_json(settings['reminders_file']) or [7,3,1]
+    reminders_schedule = load_json(settings['reminders_file']) or [7, 3, 1]
+
+    storage = settings['storage_file']
+    already_sent = load_sent_keys(storage)
 
     now = datetime.now()
-    to_send = []
+    sent_count = 0
+    skipped_duplicates = 0
+
     for ev in events:
+        if ev.date < now.date():
+            continue
+
         for ensemble in ev.ensembles:
             cfg = ensembles_cfg.get(ensemble, {})
             if not cfg.get('enabled', True):
                 continue
-            group_id = cfg.get('group_id', f'group_{ensemble}')
+            bot_id = os.environ.get(cfg.get('bot_env_var', ''))
+
             for days in reminders_schedule:
+                key = reminder_key(ev, ensemble, days)
+                if key in already_sent:
+                    skipped_duplicates += 1
+                    continue
+
                 scheduled_for = datetime.combine(ev.date, datetime.min.time()) - timedelta(days=days)
-                # Demo mode: send immediately but note schedule
-                if settings.get('demo_send_immediately'):
-                    to_send.append((group_id, format_reminder(ev, days), scheduled_for))
-                else:
-                    if scheduled_for <= now:
-                        to_send.append((group_id, format_reminder(ev, days), scheduled_for))
+                if not settings.get('demo_send_immediately') and scheduled_for > now:
+                    continue
 
-    storage = settings['storage_file']
-    for group_id, message, scheduled_for in to_send:
-        # record and send via stub
-        send_message(group_id, message + f"\n\n(Originally scheduled for {scheduled_for.isoformat()})", storage)
+                message = format_reminder(ev, days)
+                send_message(ensemble, message, storage, key=key, bot_id=bot_id)
+                already_sent.add(key)
+                sent_count += 1
 
-    print(f"Sent {len(to_send)} reminders (demo mode={settings.get('demo_send_immediately')}).")
+    print(f"Sent {sent_count} reminders, skipped {skipped_duplicates} duplicates (demo mode={settings.get('demo_send_immediately')}).")
 
 
 if __name__ == '__main__':

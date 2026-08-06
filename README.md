@@ -46,11 +46,13 @@ groupme-reminder-bot/
 ├── config/
 │   ├── settings.py
 │   ├── ensembles.json
+│   ├── ensemble_keywords.json
 │   └── reminders.json
 │
-├── calendar/
+├── sheet_calendar/
 │   ├── sheets.py
-│   └── parser.py
+│   ├── parser.py
+│   └── choral_calendar_2026_2027.csv
 │
 ├── models/
 │   ├── event.py
@@ -65,12 +67,20 @@ groupme-reminder-bot/
 ├── storage/
 │   └── sent_reminders.json
 │
-├── utils/
-│
+├── .env.example
+├── requirements.txt
 ├── main.py
 │
 └── README.md
 ```
+
+> Note: the calendar package is named `sheet_calendar`, not `calendar` — a package
+> literally named `calendar` shadows Python's built-in `calendar` module (used
+> internally by `requests` and others) for anything run from this project root.
+
+`scheduler/` is not built yet — `main.py` currently runs once per invocation rather
+than as a recurring job. `sheet_calendar/sheets.py` currently reads a CSV export of
+the calendar rather than calling the Google Sheets API directly.
 
 ## Workflow
 
@@ -125,22 +135,55 @@ Record reminder as sent
 
 The bot is designed to be configurable without changing code.
 
-Example ensemble configuration:
+### Ensembles and GroupMe bots (`config/ensembles.json`)
+
+Each ensemble maps to the name of an environment variable holding its GroupMe bot ID
+(create one bot per group at https://dev.groupme.com/bots):
 
 ```json
 {
-    "Aves": {
-        "group_id": "...",
+    "Select": {
+        "bot_env_var": "GROUPME_BOT_ID_SELECT",
         "enabled": true
     },
-    "Octaviation": {
-        "group_id": "...",
+    "Octaviation White": {
+        "bot_env_var": "GROUPME_BOT_ID_OCTAVIATION_WHITE",
         "enabled": true
     }
 }
 ```
 
-Example reminder schedule:
+Set the actual bot IDs in a `.env` file (copy `.env.example`, never commit `.env`).
+An ensemble whose bot ID is unset falls back to a local stub — it prints and records
+the reminder instead of posting to GroupMe, so the pipeline stays runnable while
+bots are being set up.
+
+### Ensemble keyword matching (`config/ensemble_keywords.json`)
+
+The calendar export has no "ensembles" column, so ensembles are inferred by matching
+keywords against each event's title (case-insensitive substring match):
+
+```json
+{
+    "ALL": ["all choirs", "all ensembles", "all-choral"],
+    "Select": ["select"],
+    "Octaviation": ["octaviation", "octa"]
+}
+```
+
+Any keyword under `"ALL"` matches every configured ensemble. This list needs regular
+upkeep — new abbreviations, nicknames, or one-off event names in the calendar won't
+match anything until a keyword for them is added here.
+
+`Octaviation` is a special case: it isn't a real GroupMe group, just a trigger
+(matched here, then resolved in `sheet_calendar/parser.py`). Calendar titles list
+colors inconsistently ("Octaviation White, Green, and Gold", "OctaGold", "Green and
+Gold"), so once "Octaviation"/"Octa" is found anywhere in the title, the parser
+looks for the bare words "white"/"green"/"gold" in that same title: any colors it
+finds get only that color's group messaged; if it finds none, all three
+(White/Green/Gold) get it.
+
+### Reminder schedule (`config/reminders.json`)
 
 ```json
 [
@@ -149,6 +192,20 @@ Example reminder schedule:
     1
 ]
 ```
+
+## Setup
+
+```bash
+pip install -r requirements.txt
+cp .env.example .env   # then fill in GroupMe bot IDs as they're created
+python main.py
+```
+
+`config/settings.py` currently points at `sheet_calendar/choral_calendar_2026_2027.csv`
+(a manual CSV export of the calendar) and treats every reminder as due immediately
+(`demo_send_immediately: True`) so a run is easy to sanity-check. Turn that off and
+wire a real recurring trigger (cron, Task Scheduler, or the not-yet-built
+`scheduler/`) once real dates matter.
 
 ## Future Improvements
 
