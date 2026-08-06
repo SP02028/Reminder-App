@@ -32,13 +32,12 @@ def format_reminder(event, days_before):
 
     date_str = f"{event.date.strftime('%a. %b')}. {event.date.day}"
 
-    message = f"Reminder: {event.title} is {when} ({date_str})"
+    parts = [f"{event.title} {when}", date_str]
     if event.start_time:
-        message += f" from {event.start_time}"
+        parts.append(event.start_time)
     if event.location:
-        message += f" at {event.location}"
-    message += "."
-    return message
+        parts.append(event.location)
+    return ", ".join(parts)
 
 
 def reminder_key(event, ensemble, days_before):
