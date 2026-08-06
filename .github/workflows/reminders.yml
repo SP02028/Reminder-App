@@ -1,0 +1,46 @@
+name: Choir Reminder Bot
+
+on:
+  schedule:
+    # 21:00 UTC = 5 PM Eastern (EDT). Drifts to 4 PM once EST starts in
+    # November -- GitHub cron doesn't follow DST. Adjust here if that matters.
+    - cron: '0 21 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run reminder bot
+        env:
+          GROUPME_BOT_ID_OCTAVIATION_WHITE: ${{ secrets.GROUPME_BOT_ID_OCTAVIATION_WHITE }}
+          GROUPME_BOT_ID_OCTAVIATION_GREEN: ${{ secrets.GROUPME_BOT_ID_OCTAVIATION_GREEN }}
+          GROUPME_BOT_ID_OCTAVIATION_GOLD: ${{ secrets.GROUPME_BOT_ID_OCTAVIATION_GOLD }}
+          GROUPME_BOT_ID_SELECT: ${{ secrets.GROUPME_BOT_ID_SELECT }}
+          GROUPME_BOT_ID_BELLE_VOCI: ${{ secrets.GROUPME_BOT_ID_BELLE_VOCI }}
+          GROUPME_BOT_ID_AVIATOR_CHORALE: ${{ secrets.GROUPME_BOT_ID_AVIATOR_CHORALE }}
+          GROUPME_BOT_ID_COPILOTS: ${{ secrets.GROUPME_BOT_ID_COPILOTS }}
+          GROUPME_BOT_ID_BOOSTERS: ${{ secrets.GROUPME_BOT_ID_BOOSTERS }}
+        run: python main.py
+
+      - name: Persist sent-reminders log
+        run: |
+          git config user.name "choir-reminder-bot"
+          git config user.email "actions@github.com"
+          git add storage/sent_reminders.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Update sent reminders log [skip ci]"
+            git push
+          fi
