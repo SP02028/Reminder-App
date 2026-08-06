@@ -2,9 +2,11 @@ name: Choir Reminder Bot
 
 on:
   schedule:
-    # 21:00 UTC = 5 PM Eastern (EDT). Drifts to 4 PM once EST starts in
-    # November -- GitHub cron doesn't follow DST. Adjust here if that matters.
-    - cron: '0 21 * * *'
+    # 21:17 UTC ~= 5 PM Eastern (EDT). Off the hour on purpose -- GitHub's own
+    # docs warn that :00 is the most congested minute for scheduled runs across
+    # all of Actions and gets delayed most. Drifts to 4:17 PM once EST starts
+    # in November, since GitHub cron doesn't follow DST -- adjust here if that matters.
+    - cron: '17 21 * * *'
   workflow_dispatch: {}
 
 permissions:
