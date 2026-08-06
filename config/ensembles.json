@@ -1,0 +1,4 @@
+{
+  "Aves": { "group_id": "group_aves", "enabled": true },
+  "Octaviation": { "group_id": "group_octaviation", "enabled": true }
+}
