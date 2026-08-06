@@ -52,6 +52,15 @@ def main():
     sent_count = 0
     skipped_duplicates = 0
 
+    horizon_days = max(reminders_schedule) if reminders_schedule else 0
+    unmatched = [
+        ev for ev in events
+        if not ev.ensembles and now.date() <= ev.date <= now.date() + timedelta(days=horizon_days)
+    ]
+    for ev in unmatched:
+        print(f"[warning] no ensemble matched for upcoming event on {ev.date}: {ev.title!r} "
+              f"-- add a keyword to config/ensemble_keywords.json or it won't get a reminder.")
+
     for ev in events:
         if ev.date < now.date():
             continue
@@ -77,7 +86,8 @@ def main():
                 already_sent.add(key)
                 sent_count += 1
 
-    print(f"Sent {sent_count} reminders, skipped {skipped_duplicates} duplicates (demo mode={settings.get('demo_send_immediately')}).")
+    print(f"Sent {sent_count} reminders, skipped {skipped_duplicates} duplicates, "
+          f"{len(unmatched)} unmatched upcoming events (demo mode={settings.get('demo_send_immediately')}).")
 
 
 if __name__ == '__main__':
