@@ -21,15 +21,24 @@ def load_json(path):
 
 
 def format_reminder(event, days_before):
-    date_str = event.date.strftime('%A, %B %d')
-    lines = ["🎶 **Choir Reminder**", "", f"**{event.title}**", "", f"📅 {date_str}"]
+    if days_before == 0:
+        when = "today"
+    elif days_before == 1:
+        when = "tomorrow"
+    elif days_before == 7:
+        when = "in a week"
+    else:
+        when = f"in {days_before} days"
+
+    date_str = f"{event.date.strftime('%a. %b')}. {event.date.day}"
+
+    message = f"Reminder: {event.title} is {when} ({date_str})"
     if event.start_time:
-        lines += ["", f"🕒 {event.start_time}"]
+        message += f" from {event.start_time}"
     if event.location:
-        lines += ["", f"📍 {event.location}"]
-    when = "today!" if days_before == 0 else f"{days_before} day{'s' if days_before != 1 else ''} away"
-    lines += ["", f"({when})"]
-    return "\n\n".join(lines)
+        message += f" at {event.location}"
+    message += "."
+    return message
 
 
 def reminder_key(event, ensemble, days_before):
